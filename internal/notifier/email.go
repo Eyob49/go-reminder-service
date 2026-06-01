@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"reminder/internal/models"
+	models "reminder/internal/model"
 
 	"github.com/resend/resend-go/v3"
 )
