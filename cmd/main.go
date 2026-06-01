@@ -12,14 +12,14 @@ import (
 	"os"
 
 	"github.com/joho/godotenv"
-	_ "modernc.org/sqlite"
+	_ "github.com/lib/pq"
 )
 
 
 func main(){
 	godotenv.Load("../.env")
 	log.Printf("API key loaded: %v", os.Getenv("RESEND_API_KEY") != "")
-	db, err := sql.Open("sqlite", "reminders.db")
+	db, err := sql.Open("postgres", os.Getenv("DATABASE_URL"))
     if err != nil {
 	log.Fatal("Failed to connect to database:", err)
     }
