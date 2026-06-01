@@ -9,6 +9,6 @@ type Reminder struct {
 	Email   string `json:"email"`
 	Phone   string `json:"phone"`
 	SendAt  time.Time `json:"sendAt"`
-	Sent    int    `json:"sent"`
+	Sent    bool     `json:"sent"`
 	Channel string `json:"channel"`
 }

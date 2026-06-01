@@ -5,23 +5,22 @@ import (
 	"fmt"
 	"log"
 	models "reminder/internal/model"
-	"time"
 
-	_ "modernc.org/sqlite"
+	_ "github.com/lib/pq"
 )
 
 var ErrNotFound = fmt.Errorf("reminder not found")
 
 func InitDB(db *sql.DB) error {
 	_, err := db.Exec(`CREATE TABLE IF NOT EXISTS reminders (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		id SERIAL PRIMARY KEY,
 		title TEXT,
 		message TEXT,
 		email TEXT,
 		phone TEXT,
 		channel TEXT,
-		send_at TEXT,
-		sent INTEGER DEFAULT 0
+		send_at TIMESTAMP,
+		sent BOOLEAN DEFAULT false
 		)`)
     if err != nil {
 	return err
@@ -32,7 +31,7 @@ func InitDB(db *sql.DB) error {
 
 // Function to Insert a new reminder into the database
 func InsertReminder(db *sql.DB, reminder models.Reminder) error {
-	_, err := db.Exec(`INSERT INTO reminders (title, message, email, phone, channel, send_at) VALUES (?, ?, ?, ?, ?, ?)`, reminder.Title, reminder.Message, reminder.Email, reminder.Phone, reminder.Channel, reminder.SendAt.UTC().Format("2006-01-02 15:04:05"))
+	_, err := db.Exec(`INSERT INTO reminders (title, message, email, phone, channel, send_at) VALUES ($1, $2, $3, $4, $5, $6)`, reminder.Title, reminder.Message, reminder.Email, reminder.Phone, reminder.Channel, reminder.SendAt.UTC())
 	if err != nil {
 		return err
 	}
@@ -53,12 +52,7 @@ func GetReminders(db *sql.DB) ([]models.Reminder, error) {
 	var reminders []models.Reminder
 	for rows.Next() {
 		var reminder models.Reminder
-		var sendAtStr string
-		err := rows.Scan(&reminder.ID, &reminder.Title, &reminder.Message, &reminder.Email, &reminder.Phone, &reminder.Channel, &sendAtStr, &reminder.Sent)
-		if err != nil {
-			return nil, err
-		}
-		reminder.SendAt, err = time.Parse("2006-01-02 15:04:05", sendAtStr)
+		err := rows.Scan(&reminder.ID, &reminder.Title, &reminder.Message, &reminder.Email, &reminder.Phone, &reminder.Channel, &reminder.SendAt, &reminder.Sent)
 		if err != nil {
 			return nil, err
 		}
@@ -69,7 +63,7 @@ func GetReminders(db *sql.DB) ([]models.Reminder, error) {
 
 // Function to delete a reminder from the database 
 func DeleteReminder(db *sql.DB, id int) error {
-	result, err := db.Exec(`DELETE FROM reminders WHERE id = ?`, id)
+	result, err := db.Exec(`DELETE FROM reminders WHERE id = $1`, id)
 	if err != nil {
 		return err
 	}
@@ -82,7 +76,7 @@ func DeleteReminder(db *sql.DB, id int) error {
 
 // Function that returns only reminders where send_at is in the past and sent = 0
 func GetDueReminders(db *sql.DB) ([]models.Reminder, error) {
-	rows, err := db.Query(`SELECT id, title, message, email, phone, channel, send_at, sent FROM reminders WHERE send_at <= datetime('now') AND sent = 0`)
+	rows, err := db.Query(`SELECT id, title, message, email, phone, channel, send_at, sent FROM reminders WHERE send_at <= NOW() AND sent = false`)
 	if err != nil {
 		return nil, err
 	}
@@ -91,12 +85,7 @@ func GetDueReminders(db *sql.DB) ([]models.Reminder, error) {
 	var reminders []models.Reminder
 	for rows.Next() {
 		var reminder models.Reminder
-		var sendAtStr string
-		err := rows.Scan(&reminder.ID, &reminder.Title, &reminder.Message, &reminder.Email, &reminder.Phone, &reminder.Channel, &sendAtStr, &reminder.Sent)
-		if err != nil {
-			return nil, err
-		}
-		reminder.SendAt, err = time.Parse("2006-01-02 15:04:05", sendAtStr)
+		err := rows.Scan(&reminder.ID, &reminder.Title, &reminder.Message, &reminder.Email, &reminder.Phone, &reminder.Channel, &reminder.SendAt, &reminder.Sent)
 		if err != nil {
 			return nil, err
 		}
@@ -107,6 +96,6 @@ func GetDueReminders(db *sql.DB) ([]models.Reminder, error) {
 
 // Function to mark a reminder as sent in the database
 func MarkReminderAsSent(db *sql.DB, id int) error {
-	_, err := db.Exec(`UPDATE reminders SET sent = 1 WHERE id = ?`, id)
+	_, err := db.Exec(`UPDATE reminders SET sent = true WHERE id = $1`, id)
 	return err
 }

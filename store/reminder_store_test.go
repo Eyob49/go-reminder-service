@@ -2,23 +2,30 @@ package store
 
 import (
 	"database/sql"
+	"os"
 	models "reminder/internal/model"
 	"testing"
 	"time"
 
+	"github.com/joho/godotenv"
 	_ "modernc.org/sqlite"
 )
 
 // Tests for InsertReminder
 func SetupTestDB(t *testing.T) *sql.DB {
+	godotenv.Load("../.env")
 	// Setup in-memory database for all tests
-	db, err := sql.Open("sqlite", ":memory:")
+	db, err := sql.Open("postgres", os.Getenv("DATABASE_URL"))
 	if err != nil {
 		t.Fatalf("Failed to connect to database: %v", err)
 	}
 	err = InitDB(db)
 	if err != nil {
 		t.Fatalf("Failed to initialize database: %v", err)
+	}
+	_, err = db.Exec(`DELETE FROM reminders`)
+	if err != nil {
+		t.Fatalf("Failed to clean up database: %v", err)
 	}
 	return db
 }
@@ -85,7 +92,7 @@ func TestDeleteReminder(t *testing.T) {
 		t.Fatalf("Failed to insert reminder: %v", err)
 	}
 	var id int
-	err = db.QueryRow(`SELECT id FROM reminders WHERE title = ?`, reminder.Title).Scan(&id)
+	err = db.QueryRow(`SELECT id FROM reminders WHERE title = $1`, reminder.Title).Scan(&id)
 	if err != nil {
 		t.Fatalf("Failed to query reminder ID: %v", err)
 	}
