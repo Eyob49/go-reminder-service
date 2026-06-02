@@ -17,7 +17,13 @@ import (
 
 
 func main(){
-	godotenv.Load("../.env")
+	if err := godotenv.Load("../.env"); err != nil {
+		log.Println("No .env file found, relying on environment variables")
+	}
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
 	log.Printf("API key loaded: %v", os.Getenv("RESEND_API_KEY") != "")
 	db, err := sql.Open("postgres", os.Getenv("DATABASE_URL"))
     if err != nil {
@@ -36,6 +42,6 @@ func main(){
 	go scheduler.StartScheduler(ctx, db)
 	http.HandleFunc("/reminders", handler.HandleReminders)
 	http.HandleFunc("/reminders/", handler.HandleReminders)
-    log.Println("Server is running on http://localhost:8080")
-    log.Fatal(http.ListenAndServe(":8080", nil))
+    log.Printf("Server is running on http://localhost:%s", port)
+    log.Fatal(http.ListenAndServe(":"+port, nil))
 }
